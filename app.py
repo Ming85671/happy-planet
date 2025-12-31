@@ -21,3 +21,15 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+# 使用 st.cache_data() 缓存图片资源
+@st.cache_data
+def load_image(image_path):
+    return image_path
+
+# 显示图片并调整大小以适应列宽
+image1 = load_image('images/Yiwen1.jpg')
+image2 = load_image('images/Yiwen2.jpg')
+
+st.image(image1, use_column_width=True)
+st.image(image2, use_column_width=True)
