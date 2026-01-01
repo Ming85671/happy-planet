@@ -18,8 +18,12 @@ st.markdown(
 )
 
 @st.cache_data
-def load_image(path: str):
-    return Image.open(path)
+def load_image(path: str, rotate_ccw: int = 0):
+    img = Image.open(path)
+    img = ImageOps.exif_transpose(img)  # 自动按 EXIF 修正方向
+    if rotate_ccw:
+        img = img.rotate(rotate_ccw, expand=True)  # 正数=逆时针；负数=顺时针
+    return img
 
 col1, col2 = st.columns(2, gap="large")
 with col1:
