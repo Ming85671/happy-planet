@@ -3,11 +3,11 @@ from PIL import Image
 
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 
-# —— 超显眼版本号：用来确认网页跑的是不是这份代码 ——
-st.error("BUILD: 2026-01-01  (如果你看不到这行，说明没有跑到新代码)")
+# ✅ 用来验证网页确实跑的是新代码
+st.error("BUILD: 2026-01-01")
 
 def fix_exif_orientation(img: Image.Image) -> Image.Image:
-    # 函数内导入，避免任何 ImageOps 名称问题
+    # 放函数里导入，最稳
     from PIL import ImageOps as _ImageOps
     try:
         return _ImageOps.exif_transpose(img)
@@ -36,7 +36,7 @@ def load_image(path: str, mode: str) -> Image.Image:
         im = apply_transform(im, mode)
         return im.copy()
 
-# —— 控制条放在页面正文里：不依赖侧边栏入口，一定看得见 ——
+# ✅ 下拉框放在正文里：一定看得到
 st.subheader("Yiwen1 图片方向调整（试试 左转90° / 右转90° / 翻转）")
 mode = st.selectbox(
     "选择 Yiwen1 的处理方式：",
@@ -44,7 +44,6 @@ mode = st.selectbox(
     index=0
 )
 
-# 标题与文字
 st.markdown(
     """
     <style>
@@ -67,3 +66,4 @@ with col1:
     st.image(image1, use_container_width=True)
 with col2:
     st.image(image2, use_container_width=True)
+
