@@ -1,5 +1,5 @@
 import streamlit as st
-from PIL import Image  # 这里只保留 Image，ImageOps 放到函数里再导入，最稳
+from PIL import Image
 
 st.set_page_config(layout="wide")
 
@@ -17,40 +17,65 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-def fix_exif_orientation(img: Image.Image) -> Image.Image:
-    # ✅ 函数内导入，避免 ImageOps 未定义/被覆盖
-    from PIL import ImageOps as _ImageOps
-
+def exif_orientation_value(img: Image.Image):
+    """读取 EXIF Orientation（274），没有就返回 None"""
     try:
-        return _ImageOps.exif_transpose(img)  # 按 EXIF 自动修正方向
+        exif = img.getexif()
+        return exif.get(274)
     except Exception:
-        # 兜底：手动读 EXIF Orientation
-        try:
-            exif = img.getexif()
-            orientation = exif.get(274)  # 274 = Orientation
-            if orientation == 3:
-                return img.rotate(180, expand=True)
-            elif orientation == 6:  # 顺时针 90°
-                return img.rotate(-90, expand=True)
-            elif orientation == 8:  # 逆时针 90°
-                return img.rotate(90, expand=True)
-        except Exception:
-            pass
+        return None
+
+def fix_exif_orientation(img: Image.Image) -> Image.Image:
+    """优先按 EXIF 自动纠正（能处理旋转+镜像）。如果失败就原样返回。"""
+    try:
+        from PIL import ImageOps
+        return ImageOps.exif_transpose(img)
+    except Exception:
         return img
 
+def apply_transform(img: Image.Image, mode: str) -> Image.Image:
+    """在 EXIF 纠正后，再进行手动旋转/翻转"""
+    if mode == "不额外处理":
+        return img
+    if mode == "左转90°":
+        return img.rotate(90, expand=True)
+    if mode == "右转90°":
+        return img.rotate(-90, expand=True)
+    if mode == "旋转180°":
+        return img.rotate(180, expand=True)
+    if mode == "水平翻转":
+        return img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    if mode == "垂直翻转":
+        return img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+    return img
+
 @st.cache_data
-def load_image(path: str, rotate_ccw: int = 0) -> Image.Image:
-    # 用 with 确保文件句柄关闭；copy() 确保图像数据读入内存，缓存更稳
+def load_image(path: str, mode: str) -> Image.Image:
     with Image.open(path) as im:
+        ori = exif_orientation_value(im)  # 读取原始 EXIF 值（仅用于显示/调试）
         im = fix_exif_orientation(im)
-        if rotate_ccw:
-            im = im.rotate(rotate_ccw, expand=True)  # 正数=逆时针；负数=顺时针
-        return im.copy()
+        im = apply_transform(im, mode)
+        im = im.copy()
+    return im
 
-# 如果 Yiwen1 方向向右歪，一般用逆时针 90° 纠正：把 0 改成 90
-image1 = load_image("images/Yiwen1.jpg", rotate_ccw= -90 )
-image2 = load_image("images/Yiwen2.jpg", rotate_ccw=0)
+# —— 左侧给你一个开关，直接在线调到正确方向 ——
+st.sidebar.header("Yiwen1 图片方向调整")
+mode = st.sidebar.selectbox(
+    "选择 Yiwen1 的处理方式（先试试 左转90° / 右转90°）：",
+    ["不额外处理", "左转90°", "右转90°", "旋转180°", "水平翻转", "垂直翻转"],
+    index=0
+)
 
+# 读取图片
+with Image.open("images/Yiwen1.jpg") as tmp:
+    ori_val = exif_orientation_value(tmp)
+
+st.sidebar.caption(f"Yiwen1 EXIF Orientation(274) = {ori_val}")
+
+image1 = load_image("images/Yiwen1.jpg", mode=mode)
+image2 = load_image("images/Yiwen2.jpg", mode="不额外处理")
+
+# 并排显示
 col1, col2 = st.columns(2, gap="large")
 with col1:
     st.image(image1, use_container_width=True)
