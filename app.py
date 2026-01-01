@@ -21,7 +21,7 @@ def load_image(path: str) -> Image.Image:
 st.markdown(
     """
     <style>
-        .text  { font-size: 28px; color: #1f5cff; text-align: center; margin: 6px 0; }
+        .text  { font-size: 48px; color: #1f5cff; text-align: center; margin: 6px 0; }
         .img-spacer { height: 40px; } /* ✅ 图片整体下移距离：这里改 60/80 都行 */
     </style>
     """,
