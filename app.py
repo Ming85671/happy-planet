@@ -48,7 +48,7 @@ def load_image(path: str, rotate_ccw: int = 0) -> Image.Image:
         return im.copy()
 
 # 如果 Yiwen1 方向向右歪，一般用逆时针 90° 纠正：把 0 改成 90
-image1 = load_image("images/Yiwen1.jpg", rotate_ccw=90)
+image1 = load_image("images/Yiwen1.jpg", rotate_ccw= -90 )
 image2 = load_image("images/Yiwen2.jpg", rotate_ccw=0)
 
 col1, col2 = st.columns(2, gap="large")
