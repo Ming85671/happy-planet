@@ -25,8 +25,11 @@ def load_image(path: str, rotate_ccw: int = 0):
         img = img.rotate(rotate_ccw, expand=True)  # 正数=逆时针；负数=顺时针
     return img
 
+image1 = load_image("images/Yiwen1.jpg", rotate_ccw=90)  # 向右歪 -> 逆时针转90°
+image2 = load_image("images/Yiwen2.jpg")
+
 col1, col2 = st.columns(2, gap="large")
 with col1:
-    st.image(load_image("images/Yiwen1.jpg"), use_container_width=True)
+    st.image(image1, use_container_width=True)
 with col2:
-    st.image(load_image("images/Yiwen2.jpg"), use_container_width=True)
+    st.image(image2, use_container_width=True)
