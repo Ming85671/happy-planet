@@ -20,9 +20,9 @@ st.markdown(
 @st.cache_data
 def load_image(path: str, rotate_ccw: int = 0):
     img = Image.open(path)
-    img = ImageOps.exif_transpose(img)  # 自动按 EXIF 修正方向
+    img = ImageOps.exif_transpose(img)
     if rotate_ccw:
-        img = img.rotate(rotate_ccw, expand=True)  # 正数=逆时针；负数=顺时针
+        img = img.rotate(rotate_ccw, expand=True)  # 正数=逆时针
     return img
 
 image1 = load_image("images/Yiwen1.jpg", rotate_ccw=90)  # 向右歪 -> 逆时针转90°
