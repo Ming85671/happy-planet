@@ -31,7 +31,7 @@ st.markdown(
 # ====== 弧形艺术字标题（用 components.html 渲染 SVG，避免被转义） ======
 title_svg = """
 <div style="display:flex;justify-content:center;margin-top:10px;">
-  <svg viewBox="0 0 1000 220" style="width:min(1100px,96vw);height:180px;">
+  <svg viewBox="0 0 1000 300" style="width:min(1100px,96vw);height:240px;">
     <defs>
       <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%"  stop-color="#ff2d2d"/>
@@ -43,16 +43,16 @@ title_svg = """
         <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="rgba(0,0,0,0.35)"/>
       </filter>
 
-      <!-- ✅ 开口向下的弧线（∩）：两端低，中间高 -->
-      <path id="arcPath" d="M 90 170 Q 500 30 910 170" />
+      <!-- 开口向下（∩）：两端低，中间高；整体下移避免裁切 -->
+      <path id="arcPath" d="M 70 220 Q 500 50 930 220" />
     </defs>
 
-    <text font-size="86"
+    <text font-size="126"
           font-family="Trebuchet MS, Arial Black, 'Microsoft YaHei', sans-serif"
           font-weight="900"
           fill="url(#grad)"
           stroke="#ffffff"
-          stroke-width="6"
+          stroke-width="7"
           paint-order="stroke fill"
           filter="url(#shadow)">
       <textPath href="#arcPath" startOffset="50%" text-anchor="middle">
@@ -63,7 +63,7 @@ title_svg = """
 </div>
 """
 
-components.html(title_svg, height=190)
+components.html(title_svg, height=250)
 
 # ====== 正文文字 ======
 st.markdown(
