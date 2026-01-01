@@ -6,144 +6,150 @@ st.set_page_config(layout="wide")
 
 
 # =========================
-# 1) 全屏掉落动画（红包/金币）
+# 1) 两侧少量飘落动画（不会挡住手机下滑）
+#    关键：canvas 插到 window.top.document，不再把 iframe 固定覆盖页面
 # =========================
-falling_html = """
+falling_overlay_html = r"""
 <!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      background: transparent;
-      overflow: hidden;
-    }
-    canvas {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none; /* 不挡住页面点击 */
-    }
+    html, body { margin:0; padding:0; background:transparent; }
   </style>
 </head>
 <body>
-  <canvas id="c"></canvas>
+<script>
+(function () {
+  // 防止 Streamlit 反复 rerun 生成多个 canvas
+  const OVERLAY_ID = "hp-fall-overlay";
 
-  <script>
-    // 让这个组件的 iframe 自己变成“全屏覆盖层”
-    (function makeOverlay() {
-      const fe = window.frameElement;
-      if (!fe) return;
-      fe.style.position = "fixed";
-      fe.style.top = "0";
-      fe.style.left = "0";
-      fe.style.width = "100vw";
-      fe.style.height = "100vh";
-      fe.style.border = "0";
-      fe.style.zIndex = "9999";
-      fe.style.background = "transparent";
-      fe.style.pointerEvents = "none"; // iframe 本身也不拦截
-    })();
+  let topWin = window;
+  let topDoc = document;
+  try {
+    topWin = window.top;
+    topDoc = window.top.document;
+  } catch (e) {
+    // 如果跨域访问失败，就直接不做全屏覆盖（避免影响滚动）
+    return;
+  }
 
-    const canvas = document.getElementById("c");
-    const ctx = canvas.getContext("2d");
+  // 如果已存在，先移除
+  const old = topDoc.getElementById(OVERLAY_ID);
+  if (old) old.remove();
 
-   const symbols = ["🧧", "💰", "✨"];
-const particles = [];
+  // 创建覆盖层
+  const overlay = topDoc.createElement("div");
+  overlay.id = OVERLAY_ID;
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "9999";
+  overlay.style.pointerEvents = "none";  // 不拦截触控/滚动
+  overlay.style.background = "transparent";
+  overlay.style.overflow = "hidden";
 
-// ✅ 更少、更克制
-const DENSITY = 18;        // 同屏数量（原来 55 太多）
-const SPAWN_RATE = 0.15;   // 每帧生成概率（原来 0.65 太频繁）
-const BASE_SPEED = 1.0;    // 下落速度
-const WIND = 0.25;         // 横向飘动强度
+  const canvas = topDoc.createElement("canvas");
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.style.pointerEvents = "none";
+  overlay.appendChild(canvas);
+  topDoc.body.appendChild(overlay);
 
-// ✅ 只在两侧生成
-const SIDE_BAND = 0.18;    // 左右两侧各占屏幕宽度的 18%
-const CENTER_PROB = 0.05;  // 仅 5% 概率随机落在中间（想完全不落中间就设为 0）
+  const ctx = canvas.getContext("2d");
 
-function rand(a, b) { return a + Math.random() * (b - a); }
+  const symbols = ["🧧", "🪙", "💰", "✨"];
+  const particles = [];
 
-function pickX() {
-  // 少量允许中间随机（可关闭）
-  if (Math.random() < CENTER_PROB) return rand(0, innerWidth);
+  // ✅ 少量 + 只在两侧
+  const isMobile = topWin.matchMedia && topWin.matchMedia("(max-width: 768px)").matches;
 
-  // 否则只从左右两侧窄带生成
-  const left = Math.random() < 0.5;
-  if (left) return rand(0, innerWidth * SIDE_BAND);
-  return rand(innerWidth * (1 - SIDE_BAND), innerWidth);
-}
+  const DENSITY   = isMobile ? 10 : 16;     // 同屏数量
+  const SPAWN_RATE= isMobile ? 0.045 : 0.06;// 生成频率
+  const BASE_SPEED= isMobile ? 0.9 : 1.0;   // 速度
+  const WIND      = 0.18;                   // 横向飘动
+  const SIDE_BAND = isMobile ? 0.14 : 0.16; // 左右两侧各占屏幕宽度比例（越小越靠边）
+  const CENTER_PROB = 0.0;                  // 中间概率（想完全不在中间就 0）
 
-function spawn(initial=false) {
-  const s = symbols[Math.floor(Math.random() * symbols.length)];
-  const size = rand(20, 32);
-  const x = pickX();
-  const y = initial ? rand(0, innerHeight) : -rand(10, 80);
-  const vy = rand(BASE_SPEED, BASE_SPEED + 2.0);
-  const vx = rand(-WIND, WIND);
-  const rot = rand(-0.6, 0.6);
-  const vr = rand(-0.012, 0.012);
-  const alpha = rand(0.75, 1.0);
+  function rand(a, b) { return a + Math.random() * (b - a); }
 
-  particles.push({ s, x, y, size, vy, vx, rot, vr, alpha });
-}
+  function resize() {
+    const dpr = topWin.devicePixelRatio || 1;
+    canvas.width = Math.floor(topWin.innerWidth * dpr);
+    canvas.height = Math.floor(topWin.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
+  function pickX() {
+    if (Math.random() < CENTER_PROB) return rand(0, topWin.innerWidth);
+    const left = Math.random() < 0.5;
+    if (left) return rand(0, topWin.innerWidth * SIDE_BAND);
+    return rand(topWin.innerWidth * (1 - SIDE_BAND), topWin.innerWidth);
+  }
 
-    // 初始填充
-    for (let i = 0; i < DENSITY; i++) spawn(true);
+  function spawn(initial=false) {
+    const s = symbols[Math.floor(Math.random() * symbols.length)];
+    const size = rand(isMobile ? 16 : 18, isMobile ? 26 : 30);
+    const x = pickX();
+    const y = initial ? rand(0, topWin.innerHeight) : -rand(10, 80);
+    const vy = rand(BASE_SPEED, BASE_SPEED + (isMobile ? 1.8 : 2.2));
+    const vx = rand(-WIND, WIND);
+    const rot = rand(-0.6, 0.6);
+    const vr  = rand(-0.012, 0.012);
+    const alpha = rand(0.75, 1.0);
+    particles.push({ s, x, y, size, vy, vx, rot, vr, alpha });
+  }
 
-    function step() {
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
+  function step() {
+    ctx.clearRect(0, 0, topWin.innerWidth, topWin.innerHeight);
 
-      // 轻微“风”随时间变化
-      const t = Date.now() * 0.001;
-      const windNow = Math.sin(t) * 0.35;
+    const t = Date.now() * 0.001;
+    const windNow = Math.sin(t) * 0.22;
 
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx + windNow;
-        p.y += p.vy;
-        p.rot += p.vr;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx + windNow;
+      p.y += p.vy;
+      p.rot += p.vr;
 
-        // 绘制 emoji
-        ctx.save();
-        ctx.globalAlpha = p.alpha;
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.font = `${p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(p.s, 0, 0);
-        ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.font = `${p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(p.s, 0, 0);
+      ctx.restore();
 
-        // 出界就移除
-        if (p.y > innerHeight + 80 || p.x < -80 || p.x > innerWidth + 80) {
-          particles.splice(i, 1);
-        }
+      if (p.y > topWin.innerHeight + 80 || p.x < -80 || p.x > topWin.innerWidth + 80) {
+        particles.splice(i, 1);
       }
-
-      // 持续生成保持密度
-      if (particles.length < DENSITY || Math.random() < SPAWN_RATE) {
-        spawn(false);
-      }
-
-      requestAnimationFrame(step);
     }
 
-    step();
-  </script>
+    if (particles.length < DENSITY || Math.random() < SPAWN_RATE) spawn(false);
+    topWin.requestAnimationFrame(step);
+  }
+
+  // 初始化
+  resize();
+  for (let i = 0; i < DENSITY; i++) spawn(true);
+
+  // 被动监听，避免影响滚动
+  topWin.addEventListener("resize", resize, { passive: true });
+
+  step();
+})();
+</script>
 </body>
 </html>
 """
 
-# height 给 1 就行，JS 会把 iframe 拉到全屏
-components.html(falling_html, height=1)
+# 让组件只占 1px，不影响布局/滚动
+components.html(falling_overlay_html, height=1)
 
 
 # =========================
-# 2) 读取图片 + 自动纠正方向
+# 2) 图片读取 + EXIF 方向纠正
 # =========================
 def fix_exif_orientation(img: Image.Image) -> Image.Image:
     from PIL import ImageOps as _ImageOps
@@ -160,13 +166,25 @@ def load_image(path: str) -> Image.Image:
 
 
 # =========================
-# 3) 页面样式
+# 3) 样式 + 手机端竖排 + 可下滑
 # =========================
 st.markdown(
     """
     <style>
-        .text  { font-size: 28px; color: #1f5cff; text-align: center; margin: 6px 0; }
-        .img-spacer { height: 40px; }  /* ✅ 图片整体下移距离 */
+      .text  { font-size: 28px; color: #1f5cff; text-align: center; margin: 6px 0; }
+      .img-spacer { height: 40px; }
+
+      /* ✅ 手机端：把 columns 竖排 */
+      @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+          flex-direction: column !important;
+          gap: 1rem !important;
+        }
+        div[data-testid="column"] {
+          width: 100% !important;
+          flex: 1 1 100% !important;
+        }
+      }
     </style>
     """,
     unsafe_allow_html=True
@@ -190,7 +208,6 @@ title_svg = """
         <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="rgba(0,0,0,0.35)"/>
       </filter>
 
-      <!-- ✅ 开口向下（∩） -->
       <path id="arcPath" d="M 70 220 Q 500 50 930 220" />
     </defs>
 
@@ -213,7 +230,7 @@ components.html(title_svg, height=260)
 
 
 # =========================
-# 5) 正文文字 + 图片
+# 5) 正文 + 图片（桌面并排，手机竖排可下滑）
 # =========================
 st.markdown(
     """
@@ -232,6 +249,7 @@ with col1:
     st.image(image1, use_container_width=True)
 with col2:
     st.image(image2, use_container_width=True)
+
 
 
 
