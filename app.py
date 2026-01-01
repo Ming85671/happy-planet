@@ -51,39 +51,45 @@ falling_html = """
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
 
-    const symbols = ["🧧", "🪙", "💰", "✨"];
-    const particles = [];
+   const symbols = ["🧧", "💰", "✨"];
+const particles = [];
 
-    // 你可以调这些参数：
-    const DENSITY = 55;         // 同屏数量（越大越密）
-    const SPAWN_RATE = 0.65;    // 每帧生成概率（越大越频繁）
-    const BASE_SPEED = 1.2;     // 基础下落速度
-    const WIND = 0.35;          // 横向飘动强度
+// ✅ 更少、更克制
+const DENSITY = 18;        // 同屏数量（原来 55 太多）
+const SPAWN_RATE = 0.15;   // 每帧生成概率（原来 0.65 太频繁）
+const BASE_SPEED = 1.0;    // 下落速度
+const WIND = 0.25;         // 横向飘动强度
 
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(innerWidth * dpr);
-      canvas.height = Math.floor(innerHeight * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    window.addEventListener("resize", resize);
-    resize();
+// ✅ 只在两侧生成
+const SIDE_BAND = 0.18;    // 左右两侧各占屏幕宽度的 18%
+const CENTER_PROB = 0.05;  // 仅 5% 概率随机落在中间（想完全不落中间就设为 0）
 
-    function rand(a, b) { return a + Math.random() * (b - a); }
+function rand(a, b) { return a + Math.random() * (b - a); }
 
-    function spawn(initial=false) {
-      const s = symbols[Math.floor(Math.random() * symbols.length)];
-      const size = rand(20, 34);                 // 字号大小
-      const x = rand(0, innerWidth);
-      const y = initial ? rand(0, innerHeight) : -rand(10, 80);
-      const vy = rand(BASE_SPEED, BASE_SPEED + 2.6);
-      const vx = rand(-WIND, WIND);
-      const rot = rand(-0.6, 0.6);
-      const vr = rand(-0.015, 0.015);
-      const alpha = rand(0.75, 1.0);
+function pickX() {
+  // 少量允许中间随机（可关闭）
+  if (Math.random() < CENTER_PROB) return rand(0, innerWidth);
 
-      particles.push({ s, x, y, size, vy, vx, rot, vr, alpha });
-    }
+  // 否则只从左右两侧窄带生成
+  const left = Math.random() < 0.5;
+  if (left) return rand(0, innerWidth * SIDE_BAND);
+  return rand(innerWidth * (1 - SIDE_BAND), innerWidth);
+}
+
+function spawn(initial=false) {
+  const s = symbols[Math.floor(Math.random() * symbols.length)];
+  const size = rand(20, 32);
+  const x = pickX();
+  const y = initial ? rand(0, innerHeight) : -rand(10, 80);
+  const vy = rand(BASE_SPEED, BASE_SPEED + 2.0);
+  const vx = rand(-WIND, WIND);
+  const rot = rand(-0.6, 0.6);
+  const vr = rand(-0.012, 0.012);
+  const alpha = rand(0.75, 1.0);
+
+  particles.push({ s, x, y, size, vy, vx, rot, vr, alpha });
+}
+
 
     // 初始填充
     for (let i = 0; i < DENSITY; i++) spawn(true);
