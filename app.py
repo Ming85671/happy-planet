@@ -1,19 +1,16 @@
 import streamlit as st
 from PIL import Image
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 
-def exif_orientation_value(img: Image.Image):
-    try:
-        exif = img.getexif()
-        return exif.get(274)
-    except Exception:
-        return None
+# —— 超显眼版本号：用来确认网页跑的是不是这份代码 ——
+st.error("BUILD: 2026-01-01  (如果你看不到这行，说明没有跑到新代码)")
 
 def fix_exif_orientation(img: Image.Image) -> Image.Image:
+    # 函数内导入，避免任何 ImageOps 名称问题
+    from PIL import ImageOps as _ImageOps
     try:
-        from PIL import ImageOps
-        return ImageOps.exif_transpose(img)
+        return _ImageOps.exif_transpose(img)
     except Exception:
         return img
 
@@ -39,19 +36,15 @@ def load_image(path: str, mode: str) -> Image.Image:
         im = apply_transform(im, mode)
         return im.copy()
 
-# ✅ 把控制条放在页面上方（一定看得见）
-st.subheader("Yiwen1 图片方向调整（试试 左转90° / 右转90°）")
+# —— 控制条放在页面正文里：不依赖侧边栏入口，一定看得见 ——
+st.subheader("Yiwen1 图片方向调整（试试 左转90° / 右转90° / 翻转）")
 mode = st.selectbox(
     "选择 Yiwen1 的处理方式：",
     ["不额外处理", "左转90°", "右转90°", "旋转180°", "水平翻转", "垂直翻转"],
     index=0
 )
 
-with Image.open("images/Yiwen1.jpg") as tmp:
-    ori_val = exif_orientation_value(tmp)
-st.caption(f"Yiwen1 EXIF Orientation(274) = {ori_val}")
-
-# 标题与文字样式
+# 标题与文字
 st.markdown(
     """
     <style>
