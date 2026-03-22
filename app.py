@@ -234,15 +234,15 @@ components.html(title_svg, height=260)
 # =========================
 st.markdown(
     """
-    <div class="text">欢迎 Yiwen 来到 快乐星球 网站！</div>
-    <div class="text">祝 Yiwen 元旦快乐，2026财源滚滚！</div>
+    <div class="text">欢迎 Yang 来到 快乐星球 网站！</div>
+    <div class="text">祝 Yang 元旦快乐，2026财源滚滚！</div>
     <div class="img-spacer"></div>
     """,
     unsafe_allow_html=True
 )
 
-image1 = load_image("images/Yiwen1.jpg")
-image2 = load_image("images/Yiwen2.jpg")
+image1 = load_image("images/Yang6.jpg")
+image2 = load_image("images/Yang8.jpg")
 
 col1, col2 = st.columns(2, gap="large")
 with col1:
